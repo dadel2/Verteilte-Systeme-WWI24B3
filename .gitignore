@@ -1,0 +1,5 @@
+node_modules/
+*.log
+.env
+MS1/*.db
+MS2/*.db
