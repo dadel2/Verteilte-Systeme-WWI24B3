@@ -1,16 +1,19 @@
 const express = require("express");
 const logging = require("logging").default;
 const { initDatabase } = require("./database/db");
+const kundenRoutes = require("./routes/kundenRoutes");
 
 const log = logging("ms1");
 const app = express();
-const PORT = 8080;
+const PORT = Number.parseInt(process.env.PORT || "8080", 10);
 
 app.use(express.json());
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "MS1" });
 });
+
+app.use("/kunden", kundenRoutes);
 
 async function start() {
   await initDatabase();
