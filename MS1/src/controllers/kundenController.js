@@ -41,7 +41,60 @@ async function getKundeById(req, res) {
   return res.json(row);
 }
 
+async function createKunde(req, res) {
+  const db = getDb();
+
+  const erlaubteFelder = [
+    "vorname",
+    "nachname",
+    "email",
+    "telefonnummer",
+    "adresse"
+  ];
+
+  const pflichtFelder = erlaubteFelder;
+  const body = req.body || {};
+
+  const invalidKeys = Object.keys(body).filter((key) => !erlaubteFelder.includes(key));
+  if (invalidKeys.length > 0) {
+    return sendError(res, 400, `Ungueltige Attribute: ${invalidKeys.join(", ")}`);
+  }
+
+  const fehlendeFelder = pflichtFelder.filter((field) => {
+    const value = body[field];
+    return typeof value !== "string" || value.trim() === "";
+  });
+
+  if (fehlendeFelder.length > 0) {
+    return sendError(res, 400, `Fehlende Pflichtattribute: ${fehlendeFelder.join(", ")}`);
+  }
+
+  try {
+    const result = await db.run(
+      `INSERT INTO kunden (vorname, nachname, email, telefonnummer, adresse)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        body.vorname.trim(),
+        body.nachname.trim(),
+        body.email.trim(),
+        body.telefonnummer.trim(),
+        body.adresse.trim()
+      ]
+    );
+
+    const created = await db.get("SELECT * FROM kunden WHERE kunden_id = ?", [result.lastID]);
+    return res.status(201).json(created);
+  } catch (error) {
+    if (String(error.message).includes("UNIQUE constraint failed")) {
+      return sendError(res, 409, "Kunde mit gleicher Email oder Telefonnummer existiert bereits.");
+    }
+    return sendError(res, 500, "Kunde konnte nicht angelegt werden.");
+  }
+}
 module.exports = {
   getAllKunden,
-  getKundeById
+  getKundeById,
+  createKunde
 };
+
+
