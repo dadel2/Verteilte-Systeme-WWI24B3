@@ -44,6 +44,65 @@ CREATE TABLE IF NOT EXISTS bestellung_artikel (
 );
 `;
 
+async function seedDemoDataIfEmpty() {
+  const db = getDb();
+
+  const kundenCount = (await db.get("SELECT COUNT(*) AS count FROM kunden")).count;
+  if (kundenCount === 0) {
+    await db.run(
+      "INSERT INTO kunden (vorname, nachname, email, telefonnummer, adresse) VALUES (?, ?, ?, ?, ?)",
+      ["Max", "Mustermann", "max@example.com", "+49111111111", "Musterweg 1"]
+    );
+    await db.run(
+      "INSERT INTO kunden (vorname, nachname, email, telefonnummer, adresse) VALUES (?, ?, ?, ?, ?)",
+      ["Anna", "Schmidt", "anna@example.com", "+49222222222", "Hauptstr. 10"]
+    );
+    await db.run(
+      "INSERT INTO kunden (vorname, nachname, email, telefonnummer, adresse) VALUES (?, ?, ?, ?, ?)",
+      ["Luca", "Weber", "luca@example.com", "+49333333333", "Ringstr. 5"]
+    );
+  }
+
+  const artikelCount = (await db.get("SELECT COUNT(*) AS count FROM artikel")).count;
+  if (artikelCount === 0) {
+    await db.run(
+      "INSERT INTO artikel (name, beschreibung, kategorie) VALUES (?, ?, ?)",
+      ["Margherita", "Tomate, Mozzarella, Basilikum", "Pizza"]
+    );
+    await db.run(
+      "INSERT INTO artikel (name, beschreibung, kategorie) VALUES (?, ?, ?)",
+      ["Salami", "Tomate, Mozzarella, Salami", "Pizza"]
+    );
+    await db.run(
+      "INSERT INTO artikel (name, beschreibung, kategorie) VALUES (?, ?, ?)",
+      ["Tiramisu", "Klassisches Dessert", "Dessert"]
+    );
+  }
+
+  const bestellungenCount = (await db.get("SELECT COUNT(*) AS count FROM bestellungen")).count;
+  if (bestellungenCount === 0) {
+    await db.run(
+      "INSERT INTO bestellungen (bestell_datum, gesamtpreis, bestellstatus, kunden_id) VALUES (?, ?, ?, ?)",
+      ["2026-04-10", 18.5, "neu", 1]
+    );
+    await db.run(
+      "INSERT INTO bestellungen (bestell_datum, gesamtpreis, bestellstatus, kunden_id) VALUES (?, ?, ?, ?)",
+      ["2026-04-10", 24.0, "in-zubereitung", 2]
+    );
+    await db.run(
+      "INSERT INTO bestellungen (bestell_datum, gesamtpreis, bestellstatus, kunden_id) VALUES (?, ?, ?, ?)",
+      ["2026-04-10", 9.9, "geliefert", 3]
+    );
+
+    await db.run("INSERT INTO bestellung_artikel (bestell_id, artikel_id) VALUES (?, ?)", [1, 1]);
+    await db.run("INSERT INTO bestellung_artikel (bestell_id, artikel_id) VALUES (?, ?)", [1, 3]);
+    await db.run("INSERT INTO bestellung_artikel (bestell_id, artikel_id) VALUES (?, ?)", [2, 2]);
+    await db.run("INSERT INTO bestellung_artikel (bestell_id, artikel_id) VALUES (?, ?)", [3, 3]);
+  }
+
+  log.info("Demo-Content geprueft/angelegt.");
+}
+
 async function initDatabase() {
   dbInstance = await open({
     filename: dbPath,
@@ -52,6 +111,7 @@ async function initDatabase() {
 
   await dbInstance.exec("PRAGMA foreign_keys = ON;");
   await dbInstance.exec(schemaSql);
+  await seedDemoDataIfEmpty();
 
   log.info(`SQLite bereit: ${dbPath}`);
 }
