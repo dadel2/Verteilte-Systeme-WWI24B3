@@ -3,6 +3,8 @@ const logging = require("logging").default;
 const { initDatabase } = require("./database/db");
 const kundenRoutes = require("./routes/kundenRoutes");
 
+const artikelRoutes = require("./routes/artikelRoutes");
+
 const log = logging("ms1");
 const app = express();
 const PORT = Number.parseInt(process.env.PORT || "8080", 10);
@@ -14,6 +16,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/kunden", kundenRoutes);
+app.use("/artikel", artikelRoutes);
 
 async function start() {
   await initDatabase();
