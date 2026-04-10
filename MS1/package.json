@@ -27,6 +27,7 @@
     "logging": "^4.2.0",
     "mqtt": "^5.15.1",
     "sqlite": "^5.1.1",
+    "sqlite3": "^6.0.1",
     "swagger-ui-express": "^5.0.1",
     "yamljs": "^0.3.0"
   }
