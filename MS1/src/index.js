@@ -4,6 +4,7 @@ const { initDatabase } = require("./database/db");
 const kundenRoutes = require("./routes/kundenRoutes");
 
 const artikelRoutes = require("./routes/artikelRoutes");
+const bestellungenRoutes = require("./routes/bestellungenRoutes");
 
 const log = logging("ms1");
 const app = express();
@@ -17,6 +18,8 @@ app.get("/health", (req, res) => {
 
 app.use("/kunden", kundenRoutes);
 app.use("/artikel", artikelRoutes);
+app.use("/bestellungen", bestellungenRoutes);
+
 
 async function start() {
   await initDatabase();
