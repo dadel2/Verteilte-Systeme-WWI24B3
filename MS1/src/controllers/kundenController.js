@@ -91,10 +91,81 @@ async function createKunde(req, res) {
     return sendError(res, 500, "Kunde konnte nicht angelegt werden.");
   }
 }
+async function patchKunde(req, res) {
+  const db = getDb();
+  const id = Number.parseInt(req.params.id, 10);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return sendError(res, 400, "Ungueltige Kunden-ID.");
+  }
+
+  const erlaubteFelder = ["vorname", "nachname", "email", "telefonnummer", "adresse"];
+  const body = req.body || {};
+  const keys = Object.keys(body);
+
+  if (keys.length === 0) {
+    return sendError(res, 400, "Keine Attribute zum Aktualisieren uebergeben.");
+  }
+
+  const invalidKeys = keys.filter((key) => !erlaubteFelder.includes(key));
+  if (invalidKeys.length > 0) {
+    return sendError(res, 400, `Ungueltige Attribute: ${invalidKeys.join(", ")}`);
+  }
+
+  const existing = await db.get("SELECT * FROM kunden WHERE kunden_id = ?", [id]);
+  if (!existing) {
+    return sendError(res, 404, "Kunde nicht gefunden.");
+  }
+
+  const setClause = keys.map((key) => `${key} = ?`).join(", ");
+  const values = keys.map((key) => {
+    const value = body[key];
+    return typeof value === "string" ? value.trim() : value;
+  });
+
+  try {
+    await db.run(`UPDATE kunden SET ${setClause} WHERE kunden_id = ?`, [...values, id]);
+    const updated = await db.get("SELECT * FROM kunden WHERE kunden_id = ?", [id]);
+    return res.json(updated);
+  } catch (error) {
+    if (String(error.message).includes("UNIQUE constraint failed")) {
+      return sendError(res, 409, "Kunde mit gleicher Email oder Telefonnummer existiert bereits.");
+    }
+    return sendError(res, 500, "Kunde konnte nicht aktualisiert werden.");
+  }
+}
+
+async function deleteKunde(req, res) {
+  const db = getDb();
+  const id = Number.parseInt(req.params.id, 10);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return sendError(res, 400, "Ungueltige Kunden-ID.");
+  }
+
+  const existing = await db.get("SELECT * FROM kunden WHERE kunden_id = ?", [id]);
+  if (!existing) {
+    return sendError(res, 404, "Kunde nicht gefunden.");
+  }
+
+  try {
+    await db.run("DELETE FROM kunden WHERE kunden_id = ?", [id]);
+    return res.status(204).send();
+  } catch (error) {
+    if (String(error.message).includes("FOREIGN KEY constraint failed")) {
+      return sendError(res, 409, "Kunde wird noch von Bestellungen referenziert.");
+    }
+    return sendError(res, 500, "Kunde konnte nicht geloescht werden.");
+  }
+}
+
 module.exports = {
   getAllKunden,
   getKundeById,
-  createKunde
+  createKunde,
+  patchKunde,
+  deleteKunde
 };
+
 
 
