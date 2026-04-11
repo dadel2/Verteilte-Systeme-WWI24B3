@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Pizza Service API
   version: 1.0.0
-  description: Vorlaeufige OpenAPI-Dokumentation fuer MS1.
+  description: OpenAPI-Dokumentation fuer MS1 (Pizza Service).
 servers:
   - url: http://localhost:8080
 paths:
@@ -24,3 +24,196 @@ paths:
                 required:
                   - status
                   - service
+  /kunden:
+    get:
+      summary: Alle Kunden laden
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+          description: Case-insensitive Volltextsuche.
+      responses:
+        '200':
+          description: Liste der Kunden
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Kunde'
+    post:
+      summary: Neuen Kunden anlegen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KundeCreate'
+      responses:
+        '201':
+          description: Kunde wurde angelegt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Kunde'
+        '400':
+          $ref: '#/components/responses/Fehler400'
+        '409':
+          $ref: '#/components/responses/Fehler409'
+  /kunden/{id}:
+    get:
+      summary: Kunden per ID laden
+      parameters:
+        - $ref: '#/components/parameters/KundenId'
+      responses:
+        '200':
+          description: Kunde gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Kunde'
+        '400':
+          $ref: '#/components/responses/Fehler400'
+        '404':
+          $ref: '#/components/responses/Fehler404'
+    patch:
+      summary: Kundenattribute aktualisieren
+      parameters:
+        - $ref: '#/components/parameters/KundenId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KundePatch'
+      responses:
+        '200':
+          description: Kunde wurde aktualisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Kunde'
+        '400':
+          $ref: '#/components/responses/Fehler400'
+        '404':
+          $ref: '#/components/responses/Fehler404'
+        '409':
+          $ref: '#/components/responses/Fehler409'
+    delete:
+      summary: Kunden loeschen
+      parameters:
+        - $ref: '#/components/parameters/KundenId'
+      responses:
+        '204':
+          description: Kunde wurde geloescht
+        '400':
+          $ref: '#/components/responses/Fehler400'
+        '404':
+          $ref: '#/components/responses/Fehler404'
+        '409':
+          $ref: '#/components/responses/Fehler409'
+components:
+  parameters:
+    KundenId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  schemas:
+    Kunde:
+      type: object
+      properties:
+        kunden_id:
+          type: integer
+        vorname:
+          type: string
+        nachname:
+          type: string
+        email:
+          type: string
+        telefonnummer:
+          type: string
+        adresse:
+          type: string
+      required:
+        - kunden_id
+        - vorname
+        - nachname
+        - email
+        - telefonnummer
+        - adresse
+    KundeCreate:
+      type: object
+      properties:
+        vorname:
+          type: string
+        nachname:
+          type: string
+        email:
+          type: string
+        telefonnummer:
+          type: string
+        adresse:
+          type: string
+      required:
+        - vorname
+        - nachname
+        - email
+        - telefonnummer
+        - adresse
+    KundePatch:
+      type: object
+      properties:
+        vorname:
+          type: string
+        nachname:
+          type: string
+        email:
+          type: string
+        telefonnummer:
+          type: string
+        adresse:
+          type: string
+      additionalProperties: false
+    Fehler:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+  responses:
+    Fehler400:
+      description: Ungueltiger Request
+      headers:
+        X-Fehlermeldung:
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Fehler'
+    Fehler404:
+      description: Ressource nicht gefunden
+      headers:
+        X-Fehlermeldung:
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Fehler'
+    Fehler409:
+      description: Konflikt / Constraint verletzt
+      headers:
+        X-Fehlermeldung:
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Fehler'
