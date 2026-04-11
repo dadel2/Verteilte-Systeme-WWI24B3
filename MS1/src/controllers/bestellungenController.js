@@ -1,4 +1,5 @@
 const { getDb } = require("../database/db");
+const { publishResourceChange } = require("../mqtt/publisher");
 const { sendError } = require("../utils/httpError");
 
 async function getAllBestellungen(req, res) {
@@ -127,6 +128,7 @@ async function createBestellung(req, res) {
       [result.lastID]
     );
 
+    await publishResourceChange("bestellungen", created.bestell_id, "create");
     return res.status(201).json({ ...created, artikel });
   } catch (error) {
     await db.exec("ROLLBACK");
@@ -236,6 +238,7 @@ async function patchBestellung(req, res) {
     [id]
   );
 
+  await publishResourceChange("bestellungen", updated.bestell_id, "update");
   return res.json({ ...updated, artikel });
 }
 
@@ -257,6 +260,7 @@ async function deleteBestellung(req, res) {
     await db.run("DELETE FROM bestellung_artikel WHERE bestell_id = ?", [id]);
     await db.run("DELETE FROM bestellungen WHERE bestell_id = ?", [id]);
     await db.exec("COMMIT");
+    await publishResourceChange("bestellungen", id, "delete");
     return res.status(204).send();
   } catch (error) {
     await db.exec("ROLLBACK");

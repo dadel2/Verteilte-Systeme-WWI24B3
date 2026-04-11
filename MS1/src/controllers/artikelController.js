@@ -1,4 +1,5 @@
 const { getDb } = require("../database/db");
+const { publishResourceChange } = require("../mqtt/publisher");
 const { sendError } = require("../utils/httpError");
 
 async function getAllArtikel(req, res) {
@@ -64,6 +65,7 @@ async function createArtikel(req, res) {
       [body.name.trim(), (body.beschreibung || "").trim(), body.kategorie.trim()]
     );
     const created = await db.get("SELECT * FROM artikel WHERE artikel_id = ?", [result.lastID]);
+    await publishResourceChange("artikel", created.artikel_id, "create");
     return res.status(201).json(created);
   } catch (error) {
     if (String(error.message).includes("UNIQUE constraint failed")) {
@@ -108,6 +110,7 @@ async function patchArtikel(req, res) {
   try {
     await db.run(`UPDATE artikel SET ${setClause} WHERE artikel_id = ?`, [...values, id]);
     const updated = await db.get("SELECT * FROM artikel WHERE artikel_id = ?", [id]);
+    await publishResourceChange("artikel", updated.artikel_id, "update");
     return res.json(updated);
   } catch (error) {
     if (String(error.message).includes("UNIQUE constraint failed")) {
@@ -132,6 +135,7 @@ async function deleteArtikel(req, res) {
 
   try {
     await db.run("DELETE FROM artikel WHERE artikel_id = ?", [id]);
+    await publishResourceChange("artikel", id, "delete");
     return res.status(204).send();
   } catch (error) {
     if (String(error.message).includes("FOREIGN KEY constraint failed")) {

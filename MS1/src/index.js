@@ -1,6 +1,7 @@
 const express = require("express");
 const logging = require("logging").default;
 const { initDatabase } = require("./database/db");
+const { initMqttPublisher, closeMqttPublisher } = require("./mqtt/publisher");
 const kundenRoutes = require("./routes/kundenRoutes");
 
 const artikelRoutes = require("./routes/artikelRoutes");
@@ -23,6 +24,7 @@ app.use("/bestellungen", bestellungenRoutes);
 
 async function start() {
   await initDatabase();
+  initMqttPublisher();
 
   app.listen(PORT, () => {
     log.info(`MS1 laeuft auf http://localhost:${PORT}`);
@@ -32,4 +34,14 @@ async function start() {
 start().catch((error) => {
   log.error(error.stack || error.message);
   process.exit(1);
+});
+
+process.on("SIGINT", () => {
+  closeMqttPublisher();
+  process.exit(0);
+});
+
+process.on("SIGTERM", () => {
+  closeMqttPublisher();
+  process.exit(0);
 });
