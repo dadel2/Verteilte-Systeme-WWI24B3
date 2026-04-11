@@ -134,8 +134,140 @@ async function createBestellung(req, res) {
   }
 }
 
+async function patchBestellung(req, res) {
+  const db = getDb();
+  const id = Number.parseInt(req.params.id, 10);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return sendError(res, 400, "Ungueltige Bestell-ID.");
+  }
+
+  const existing = await db.get("SELECT * FROM bestellungen WHERE bestell_id = ?", [id]);
+  if (!existing) {
+    return sendError(res, 404, "Bestellung nicht gefunden.");
+  }
+
+  const erlaubteFelder = ["bestell_datum", "gesamtpreis", "bestellstatus", "kunden_id", "artikel_ids"];
+  const body = req.body || {};
+  const keys = Object.keys(body);
+
+  if (keys.length === 0) {
+    return sendError(res, 400, "Keine Attribute zum Aktualisieren uebergeben.");
+  }
+
+  const invalidKeys = keys.filter((key) => !erlaubteFelder.includes(key));
+  if (invalidKeys.length > 0) {
+    return sendError(res, 400, `Ungueltige Attribute: ${invalidKeys.join(", ")}`);
+  }
+
+  const updateKeys = keys.filter((key) => key !== "artikel_ids");
+
+  try {
+    await db.exec("BEGIN TRANSACTION");
+
+    if (updateKeys.includes("kunden_id")) {
+      const kundenId = Number.parseInt(body.kunden_id, 10);
+      if (!Number.isInteger(kundenId) || kundenId <= 0) {
+        await db.exec("ROLLBACK");
+        return sendError(res, 400, "Ungueltige kunden_id.");
+      }
+
+      const kunde = await db.get("SELECT kunden_id FROM kunden WHERE kunden_id = ?", [kundenId]);
+      if (!kunde) {
+        await db.exec("ROLLBACK");
+        return sendError(res, 409, "Referenzierter Kunde existiert nicht.");
+      }
+      body.kunden_id = kundenId;
+    }
+
+    if (updateKeys.length > 0) {
+      const setClause = updateKeys.map((key) => `${key} = ?`).join(", ");
+      const values = updateKeys.map((key) => {
+        if (key === "gesamtpreis") {
+          return Number(body[key]);
+        }
+        return String(body[key]).trim();
+      });
+
+      await db.run(`UPDATE bestellungen SET ${setClause} WHERE bestell_id = ?`, [...values, id]);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "artikel_ids")) {
+      if (!Array.isArray(body.artikel_ids) || body.artikel_ids.length === 0) {
+        await db.exec("ROLLBACK");
+        return sendError(res, 400, "artikel_ids muss ein nicht-leeres Array sein.");
+      }
+
+      const artikelIds = [...new Set(body.artikel_ids.map((artikelId) => Number.parseInt(artikelId, 10)))];
+      if (artikelIds.some((artikelId) => !Number.isInteger(artikelId) || artikelId <= 0)) {
+        await db.exec("ROLLBACK");
+        return sendError(res, 400, "artikel_ids enthaelt ungueltige IDs.");
+      }
+
+      const placeholders = artikelIds.map(() => "?").join(",");
+      const vorhandeneArtikel = await db.all(
+        `SELECT artikel_id FROM artikel WHERE artikel_id IN (${placeholders})`,
+        artikelIds
+      );
+      if (vorhandeneArtikel.length !== artikelIds.length) {
+        await db.exec("ROLLBACK");
+        return sendError(res, 409, "Mindestens ein referenzierter Artikel existiert nicht.");
+      }
+
+      await db.run("DELETE FROM bestellung_artikel WHERE bestell_id = ?", [id]);
+      for (const artikelId of artikelIds) {
+        await db.run("INSERT INTO bestellung_artikel (bestell_id, artikel_id) VALUES (?, ?)", [id, artikelId]);
+      }
+    }
+
+    await db.exec("COMMIT");
+  } catch (error) {
+    await db.exec("ROLLBACK");
+    return sendError(res, 500, "Bestellung konnte nicht aktualisiert werden.");
+  }
+
+  const updated = await db.get("SELECT * FROM bestellungen WHERE bestell_id = ?", [id]);
+  const artikel = await db.all(
+    `SELECT a.artikel_id, a.name, a.beschreibung, a.kategorie
+     FROM bestellung_artikel ba
+     JOIN artikel a ON a.artikel_id = ba.artikel_id
+     WHERE ba.bestell_id = ?
+     ORDER BY a.artikel_id`,
+    [id]
+  );
+
+  return res.json({ ...updated, artikel });
+}
+
+async function deleteBestellung(req, res) {
+  const db = getDb();
+  const id = Number.parseInt(req.params.id, 10);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return sendError(res, 400, "Ungueltige Bestell-ID.");
+  }
+
+  const existing = await db.get("SELECT * FROM bestellungen WHERE bestell_id = ?", [id]);
+  if (!existing) {
+    return sendError(res, 404, "Bestellung nicht gefunden.");
+  }
+
+  try {
+    await db.exec("BEGIN TRANSACTION");
+    await db.run("DELETE FROM bestellung_artikel WHERE bestell_id = ?", [id]);
+    await db.run("DELETE FROM bestellungen WHERE bestell_id = ?", [id]);
+    await db.exec("COMMIT");
+    return res.status(204).send();
+  } catch (error) {
+    await db.exec("ROLLBACK");
+    return sendError(res, 500, "Bestellung konnte nicht geloescht werden.");
+  }
+}
+
 module.exports = {
   getAllBestellungen,
   getBestellungById,
-  createBestellung
+  createBestellung,
+  patchBestellung,
+  deleteBestellung
 };
