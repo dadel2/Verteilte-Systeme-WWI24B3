@@ -1,0 +1,26 @@
+openapi: 3.0.3
+info:
+  title: Pizza Service API
+  version: 1.0.0
+  description: Vorlaeufige OpenAPI-Dokumentation fuer MS1.
+servers:
+  - url: http://localhost:8080
+paths:
+  /health:
+    get:
+      summary: Health-Check von MS1
+      responses:
+        '200':
+          description: Service ist erreichbar
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+                required:
+                  - status
+                  - service

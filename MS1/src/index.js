@@ -2,6 +2,7 @@ const express = require("express");
 const logging = require("logging").default;
 const { initDatabase } = require("./database/db");
 const { initMqttPublisher, closeMqttPublisher } = require("./mqtt/publisher");
+const { setupOpenApi } = require("./openapi/openapi");
 const kundenRoutes = require("./routes/kundenRoutes");
 
 const artikelRoutes = require("./routes/artikelRoutes");
@@ -12,6 +13,7 @@ const app = express();
 const PORT = Number.parseInt(process.env.PORT || "8080", 10);
 
 app.use(express.json());
+setupOpenApi(app);
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "MS1" });
