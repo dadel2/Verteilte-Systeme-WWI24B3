@@ -204,7 +204,95 @@ paths:
           $ref: '#/components/responses/Fehler404'
         '409':
           $ref: '#/components/responses/Fehler409'
-components:
+  /bestellungen:
+    get:
+      summary: Alle Bestellungen laden
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+          description: Case-insensitive Volltextsuche.
+      responses:
+        '200':
+          description: Liste der Bestellungen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bestellung'
+    post:
+      summary: Neue Bestellung anlegen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BestellungCreate'
+      responses:
+        '201':
+          description: Bestellung wurde angelegt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BestellungMitArtikel'
+        '400':
+          $ref: '#/components/responses/Fehler400'
+        '409':
+          $ref: '#/components/responses/Fehler409'
+  /bestellungen/{id}:
+    get:
+      summary: Bestellung per ID laden
+      parameters:
+        - $ref: '#/components/parameters/BestellungId'
+      responses:
+        '200':
+          description: Bestellung gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BestellungMitArtikel'
+        '400':
+          $ref: '#/components/responses/Fehler400'
+        '404':
+          $ref: '#/components/responses/Fehler404'
+    patch:
+      summary: Bestellung aktualisieren
+      parameters:
+        - $ref: '#/components/parameters/BestellungId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BestellungPatch'
+      responses:
+        '200':
+          description: Bestellung wurde aktualisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BestellungMitArtikel'
+        '400':
+          $ref: '#/components/responses/Fehler400'
+        '404':
+          $ref: '#/components/responses/Fehler404'
+        '409':
+          $ref: '#/components/responses/Fehler409'
+    delete:
+      summary: Bestellung loeschen
+      parameters:
+        - $ref: '#/components/parameters/BestellungId'
+      responses:
+        '204':
+          description: Bestellung wurde geloescht
+        '400':
+          $ref: '#/components/responses/Fehler400'
+        '404':
+          $ref: '#/components/responses/Fehler404'
+  components:
   parameters:
     KundenId:
       in: path
@@ -214,6 +302,13 @@ components:
         type: integer
         minimum: 1
     ArtikelId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    BestellungId:
       in: path
       name: id
       required: true
@@ -313,6 +408,71 @@ components:
         kategorie:
           type: string
       additionalProperties: false
+    Bestellung:
+      type: object
+      properties:
+        bestell_id:
+          type: integer
+        bestell_datum:
+          type: string
+        gesamtpreis:
+          type: number
+        bestellstatus:
+          type: string
+        kunden_id:
+          type: integer
+      required:
+        - bestell_id
+        - bestell_datum
+        - gesamtpreis
+        - bestellstatus
+        - kunden_id
+    BestellungCreate:
+      type: object
+      properties:
+        bestell_datum:
+          type: string
+        gesamtpreis:
+          type: number
+        bestellstatus:
+          type: string
+        kunden_id:
+          type: integer
+        artikel_ids:
+          type: array
+          items:
+            type: integer
+      required:
+        - bestell_datum
+        - gesamtpreis
+        - bestellstatus
+        - kunden_id
+        - artikel_ids
+    BestellungPatch:
+      type: object
+      properties:
+        bestell_datum:
+          type: string
+        gesamtpreis:
+          type: number
+        bestellstatus:
+          type: string
+        kunden_id:
+          type: integer
+        artikel_ids:
+          type: array
+          items:
+            type: integer
+      additionalProperties: false
+    BestellungMitArtikel:
+      allOf:
+        - $ref: '#/components/schemas/Bestellung'
+        - type: object
+          properties:
+            artikel:
+              type: array
+              items:
+                $ref: '#/components/schemas/Artikel'
     Fehler:
       type: object
       properties:
