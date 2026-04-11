@@ -114,9 +114,106 @@ paths:
           $ref: '#/components/responses/Fehler404'
         '409':
           $ref: '#/components/responses/Fehler409'
+  /artikel:
+    get:
+      summary: Alle Artikel laden
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+          description: Case-insensitive Volltextsuche.
+      responses:
+        '200':
+          description: Liste der Artikel
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Artikel'
+    post:
+      summary: Neuen Artikel anlegen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArtikelCreate'
+      responses:
+        '201':
+          description: Artikel wurde angelegt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artikel'
+        '400':
+          $ref: '#/components/responses/Fehler400'
+        '409':
+          $ref: '#/components/responses/Fehler409'
+  /artikel/{id}:
+    get:
+      summary: Artikel per ID laden
+      parameters:
+        - $ref: '#/components/parameters/ArtikelId'
+      responses:
+        '200':
+          description: Artikel gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artikel'
+        '400':
+          $ref: '#/components/responses/Fehler400'
+        '404':
+          $ref: '#/components/responses/Fehler404'
+    patch:
+      summary: Artikelattribute aktualisieren
+      parameters:
+        - $ref: '#/components/parameters/ArtikelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArtikelPatch'
+      responses:
+        '200':
+          description: Artikel wurde aktualisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artikel'
+        '400':
+          $ref: '#/components/responses/Fehler400'
+        '404':
+          $ref: '#/components/responses/Fehler404'
+        '409':
+          $ref: '#/components/responses/Fehler409'
+    delete:
+      summary: Artikel loeschen
+      parameters:
+        - $ref: '#/components/parameters/ArtikelId'
+      responses:
+        '204':
+          description: Artikel wurde geloescht
+        '400':
+          $ref: '#/components/responses/Fehler400'
+        '404':
+          $ref: '#/components/responses/Fehler404'
+        '409':
+          $ref: '#/components/responses/Fehler409'
 components:
   parameters:
     KundenId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    ArtikelId:
       in: path
       name: id
       required: true
@@ -177,6 +274,43 @@ components:
         telefonnummer:
           type: string
         adresse:
+          type: string
+      additionalProperties: false
+    Artikel:
+      type: object
+      properties:
+        artikel_id:
+          type: integer
+        name:
+          type: string
+        beschreibung:
+          type: string
+        kategorie:
+          type: string
+      required:
+        - artikel_id
+        - name
+        - kategorie
+    ArtikelCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        beschreibung:
+          type: string
+        kategorie:
+          type: string
+      required:
+        - name
+        - kategorie
+    ArtikelPatch:
+      type: object
+      properties:
+        name:
+          type: string
+        beschreibung:
+          type: string
+        kategorie:
           type: string
       additionalProperties: false
     Fehler:
