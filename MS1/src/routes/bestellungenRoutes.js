@@ -1,12 +1,14 @@
 const express = require("express");
 const {
   getAllBestellungen,
-  getBestellungById
+  getBestellungById,
+  createBestellung
 } = require("../controllers/bestellungenController");
 
 const router = express.Router();
 
 router.get("/", getAllBestellungen);
 router.get("/:id", getBestellungById);
+router.post("/", createBestellung);
 
 module.exports = router;
