@@ -3,3 +3,5 @@ node_modules/
 .env
 MS1/*.db
 MS2/*.db
+infrastructure/mosquitto/data/
+infrastructure/mosquitto/log/
