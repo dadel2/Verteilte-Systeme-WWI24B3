@@ -48,10 +48,46 @@ docker compose logs ms2 --tail 50
 
 Erwartung in den Logs:
 - `Verbunden mit MQTT-Broker`
-- `Abonniert: pizza-service/events/#`
-- `Aenderung empfangen: Ressource 'kunden' ...`
+- `Abonniert: pizza-service/events/# und pizza-service/status/#`
+- `Aenderung empfangen: Ressource 'kunden' ... [QoS=1, retained=false]`
 
-## 4) Services stoppen
+## 4) Retained Message pruefen (Service-Status)
+
+MS2 neu starten und dann direkt Logs ansehen:
+
+```powershell
+docker compose restart ms2
+docker compose logs ms2 --tail 50
+```
+
+Erwartung:
+- Direkt nach Subscribe erscheint ein Statuseintrag von `ms1`.
+- In diesem Statuseintrag steht `retained=true`.
+
+## 5) Last Will pruefen (unerwarteter Abbruch)
+
+MS1 hart beenden:
+
+```powershell
+docker compose kill ms1
+docker compose logs ms2 --tail 80
+```
+
+Erwartung in MS2-Logs:
+- Statuseintrag fuer `ms1` mit `status='offline'` und `reason='unexpected_disconnect'`
+- Der Status kommt ueber das Topic `pizza-service/status/ms1`.
+
+MS1 wieder starten:
+
+```powershell
+docker compose up -d ms1
+docker compose logs ms2 --tail 80
+```
+
+Erwartung:
+- Neuer Statuseintrag mit `status='online'`.
+
+## 6) Services stoppen
 
 ```powershell
 docker compose down
