@@ -4,7 +4,9 @@ const { open } = require("sqlite");
 const logging = require("logging").default;
 
 const log = logging("db");
-const dbPath = path.join(__dirname, "..", "..", "pizza-service.db");
+const dbPath = process.env.DB_FILE
+  ? path.resolve(process.env.DB_FILE)
+  : path.join(__dirname, "..", "..", "pizza-service.db");
 
 let dbInstance = null;
 

@@ -10,3 +10,35 @@ services:
       - ./infrastructure/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
       - ./infrastructure/mosquitto/data:/mosquitto/data
       - ./infrastructure/mosquitto/log:/mosquitto/log
+
+  ms1:
+    build:
+      context: ./MS1
+    container_name: pizza-ms1
+    restart: unless-stopped
+    depends_on:
+      - mqtt-broker
+    environment:
+      PORT: "8080"
+      MQTT_BROKER_URL: mqtt://mqtt-broker:1883
+      MQTT_TOPIC_PREFIX: pizza-service/events
+      DB_FILE: /data/pizza-service.db
+    ports:
+      - "8080:8080"
+    volumes:
+      - ms1_db_data:/data
+
+  ms2:
+    build:
+      context: ./MS2
+    container_name: pizza-ms2
+    restart: unless-stopped
+    depends_on:
+      - mqtt-broker
+      - ms1
+    environment:
+      MQTT_BROKER_URL: mqtt://mqtt-broker:1883
+      MQTT_TOPIC: pizza-service/events/#
+
+volumes:
+  ms1_db_data:
