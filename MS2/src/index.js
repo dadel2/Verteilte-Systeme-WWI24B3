@@ -1,6 +1,8 @@
 const mqtt = require("mqtt");
 const http = require("http");
 const { URL } = require("url");
+const path = require("path");
+const fs = require("fs");
 const logging = require("logging").default;
 
 const log = logging("ms2");
@@ -18,6 +20,7 @@ const portRaw = Number.parseInt(process.env.PORT || "8081", 10);
 const httpPort = Number.isInteger(portRaw) && portRaw > 0 ? portRaw : 8081;
 const historyLimitRaw = Number.parseInt(process.env.MS2_EVENT_HISTORY_LIMIT || "200", 10);
 const historyLimit = Number.isInteger(historyLimitRaw) && historyLimitRaw > 0 ? historyLimitRaw : 200;
+const dashboardPath = path.join(__dirname, "public", "index.html");
 
 const eventHistory = [];
 const serviceStatusByName = new Map();
@@ -56,6 +59,18 @@ function startHttpApi() {
 
     if (req.method === "GET" && requestUrl.pathname === "/health") {
       return sendJson(res, 200, { status: "ok", service: "MS2" });
+    }
+
+    if (req.method === "GET" && requestUrl.pathname === "/") {
+      fs.readFile(dashboardPath, "utf8", (error, html) => {
+        if (error) {
+          return sendJson(res, 500, { error: "Dashboard konnte nicht geladen werden." });
+        }
+
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.end(html);
+      });
+      return;
     }
 
     if (req.method === "GET" && requestUrl.pathname === "/events") {

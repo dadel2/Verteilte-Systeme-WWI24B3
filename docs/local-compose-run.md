@@ -32,6 +32,12 @@ Zusatzcheck fuer MS2:
 Invoke-RestMethod -Method Get -Uri "http://localhost:8081/health"
 ```
 
+Dashboard im Browser:
+
+```text
+http://localhost:8081/
+```
+
 ## 3) MQTT-Ende-zu-Ende pruefen
 
 Neuen Kunden anlegen (MS1 publisht Event):
