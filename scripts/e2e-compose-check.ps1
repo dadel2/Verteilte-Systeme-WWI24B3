@@ -42,6 +42,30 @@ function Wait-ForHealth {
   return $false
 }
 
+function Assert-ServiceStatus {
+  param(
+    [string]$ServiceName,
+    [string]$ExpectedStatus,
+    [int]$TimeoutSeconds = 25
+  )
+
+  $started = Get-Date
+  while (((Get-Date) - $started).TotalSeconds -lt $TimeoutSeconds) {
+    try {
+      $statusResponse = Invoke-RestMethod -Method Get -Uri "http://localhost:8081/status"
+      $service = $statusResponse.services.$ServiceName
+      if ($null -ne $service -and $service.status -eq $ExpectedStatus) {
+        return $true
+      }
+    } catch {
+      Start-Sleep -Milliseconds 700
+    }
+    Start-Sleep -Milliseconds 500
+  }
+
+  return $false
+}
+
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $root
 
@@ -58,6 +82,14 @@ try {
     throw "MS1 Health-Endpoint ist nicht erreichbar."
   }
   Write-Host "[PASS] MS1 /health erreichbar"
+
+  Write-Host "==> Warte auf MS2 Health-Endpoint"
+  $ms2HealthOk = Wait-ForHealth -Url "http://localhost:8081/health" -TimeoutSeconds 80
+  $results += $ms2HealthOk
+  if (-not $ms2HealthOk) {
+    throw "MS2 Health-Endpoint ist nicht erreichbar."
+  }
+  Write-Host "[PASS] MS2 /health erreichbar"
 
   Write-Host "==> Trigger Event: POST /kunden"
   $stamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
@@ -83,27 +115,48 @@ try {
   }
 
   Start-Sleep -Seconds 3
-  $ms2Log = docker compose logs ms2 --tail 200
-  $results += Assert-Contains -Text $ms2Log -Pattern "Aenderung empfangen: Ressource 'kunden'" -Label "MS2 hat Kunden-Event empfangen"
-  $results += Assert-Contains -Text $ms2Log -Pattern "retained=true|retained=True" -Label "Retained-Status sichtbar"
+  $eventsResponse = Invoke-RestMethod -Method Get -Uri "http://localhost:8081/events?limit=200"
+  $eventsJson = $eventsResponse | ConvertTo-Json -Depth 10
+  $results += Assert-Contains -Text $eventsJson -Pattern "\"type\":\\s*\"event\"" -Label "MS2 Event-Historie enthaelt Fach-Event"
+  $results += Assert-Contains -Text $eventsJson -Pattern "\"type\":\\s*\"status\"" -Label "MS2 Event-Historie enthaelt Status-Event"
+  $results += Assert-Contains -Text $eventsJson -Pattern "\"retained\":\\s*true" -Label "Retained-Status sichtbar"
 
   Write-Host "==> Retained-Check durch MS2 Neustart"
   docker compose restart ms2 | Out-Null
-  Start-Sleep -Seconds 4
-  $ms2AfterRestart = docker compose logs ms2 --tail 200
-  $results += Assert-Contains -Text $ms2AfterRestart -Pattern "Service-Status: 'ms1' ist 'online'" -Label "Retained Online-Status nach MS2 Restart"
+  Start-Sleep -Seconds 6
+  $ms2HealthAfterRestart = Wait-ForHealth -Url "http://localhost:8081/health" -TimeoutSeconds 40
+  $results += $ms2HealthAfterRestart
+  if ($ms2HealthAfterRestart) {
+    Write-Host "[PASS] MS2 nach Restart wieder erreichbar"
+  } else {
+    Write-Host "[FAIL] MS2 nach Restart nicht erreichbar"
+  }
+  $results += Assert-ServiceStatus -ServiceName "ms1" -ExpectedStatus "online" -TimeoutSeconds 25
+  if ($results[-1]) {
+    Write-Host "[PASS] Retained Online-Status nach MS2 Restart"
+  } else {
+    Write-Host "[FAIL] Retained Online-Status nach MS2 Restart"
+  }
 
   Write-Host "==> Last-Will Check (hartes Stoppen von MS1)"
   docker compose kill ms1 | Out-Null
-  Start-Sleep -Seconds 4
-  $ms2AfterKill = docker compose logs ms2 --tail 250
-  $results += Assert-Contains -Text $ms2AfterKill -Pattern "unexpected_disconnect" -Label "Last-Will Event empfangen"
+  $lastWillOk = Assert-ServiceStatus -ServiceName "ms1" -ExpectedStatus "offline" -TimeoutSeconds 30
+  $results += $lastWillOk
+  if ($lastWillOk) {
+    Write-Host "[PASS] Last-Will Event empfangen"
+  } else {
+    Write-Host "[FAIL] Last-Will Event empfangen"
+  }
 
   Write-Host "==> MS1 wieder starten"
   docker compose up -d ms1 | Out-Null
-  Start-Sleep -Seconds 4
-  $ms2AfterRecover = docker compose logs ms2 --tail 250
-  $results += Assert-Contains -Text $ms2AfterRecover -Pattern "Service-Status: 'ms1' ist 'online'" -Label "Online-Status nach Restart empfangen"
+  $onlineAfterRecover = Assert-ServiceStatus -ServiceName "ms1" -ExpectedStatus "online" -TimeoutSeconds 30
+  $results += $onlineAfterRecover
+  if ($onlineAfterRecover) {
+    Write-Host "[PASS] Online-Status nach Restart empfangen"
+  } else {
+    Write-Host "[FAIL] Online-Status nach Restart empfangen"
+  }
 
   $passCount = ($results | Where-Object { $_ }).Count
   $totalCount = $results.Count

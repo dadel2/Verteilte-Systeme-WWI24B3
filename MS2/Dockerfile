@@ -7,4 +7,6 @@ RUN npm ci --omit=dev
 
 COPY src ./src
 
+EXPOSE 8081
+
 CMD ["npm", "start"]

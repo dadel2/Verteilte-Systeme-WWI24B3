@@ -26,6 +26,12 @@ Erwartung:
 {"status":"ok","service":"MS1"}
 ```
 
+Zusatzcheck fuer MS2:
+
+```powershell
+Invoke-RestMethod -Method Get -Uri "http://localhost:8081/health"
+```
+
 ## 3) MQTT-Ende-zu-Ende pruefen
 
 Neuen Kunden anlegen (MS1 publisht Event):
@@ -56,6 +62,13 @@ Erwartung in den Logs:
 - `Verbunden mit MQTT-Broker`
 - `Abonniert: pizza-service/events/# und pizza-service/status/#`
 - `Aenderung empfangen: Ressource 'kunden' ... [QoS=1, retained=false]`
+
+Alternative ohne Logsuche (MS2 API):
+
+```powershell
+Invoke-RestMethod -Method Get -Uri "http://localhost:8081/events?limit=20"
+Invoke-RestMethod -Method Get -Uri "http://localhost:8081/status"
+```
 
 ## 4) Retained Message pruefen (Service-Status)
 

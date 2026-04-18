@@ -39,10 +39,14 @@ services:
       - mqtt-broker
       - ms1
     environment:
+      PORT: "8081"
       MQTT_BROKER_URL: mqtt://mqtt-broker:1883
       MQTT_TOPIC: pizza-service/events/#
       MQTT_STATUS_TOPIC: pizza-service/status/#
       MQTT_QOS: "1"
+      MS2_EVENT_HISTORY_LIMIT: "200"
+    ports:
+      - "8081:8081"
 
 volumes:
   ms1_db_data:
