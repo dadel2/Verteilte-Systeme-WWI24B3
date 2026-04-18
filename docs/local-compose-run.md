@@ -8,6 +8,12 @@ docker compose up -d --build
 docker compose ps
 ```
 
+Alternativ als One-Command-Ende-zu-Ende-Test:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\e2e-compose-check.ps1
+```
+
 ## 2) Gesundheit von MS1 pruefen
 
 ```powershell
