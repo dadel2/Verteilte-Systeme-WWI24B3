@@ -5,3 +5,5 @@ MS1/*.db
 MS2/*.db
 infrastructure/mosquitto/data/
 infrastructure/mosquitto/log/
+.tmp-mqtt-test/
+tmp-mqtt-e2e/
