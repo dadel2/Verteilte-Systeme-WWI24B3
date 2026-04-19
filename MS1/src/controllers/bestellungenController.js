@@ -2,6 +2,14 @@ const { getDb } = require("../database/db");
 const { publishResourceChange } = require("../mqtt/publisher");
 const { sendError } = require("../utils/httpError");
 
+function parseGueltigenGesamtpreis(value) {
+  const preis = Number(value);
+  if (!Number.isFinite(preis) || preis < 0) {
+    return null;
+  }
+  return preis;
+}
+
 async function getAllBestellungen(req, res) {
   const db = getDb();
   const q = (req.query.q || "").trim();
@@ -81,6 +89,21 @@ async function createBestellung(req, res) {
     return sendError(res, 400, "Ungueltige kunden_id.");
   }
 
+  const bestellDatum = String(daten.bestell_datum || "").trim();
+  if (bestellDatum.length === 0) {
+    return sendError(res, 400, "Ungueltiges bestell_datum.");
+  }
+
+  const bestellstatus = String(daten.bestellstatus || "").trim();
+  if (bestellstatus.length === 0) {
+    return sendError(res, 400, "Ungueltiger bestellstatus.");
+  }
+
+  const gesamtpreis = parseGueltigenGesamtpreis(daten.gesamtpreis);
+  if (gesamtpreis === null) {
+    return sendError(res, 400, "Ungueltiger gesamtpreis (muss >= 0 sein).");
+  }
+
   const kunde = await db.get("SELECT kunden_id FROM kunden WHERE kunden_id = ?", [kundenId]);
   if (!kunde) {
     return sendError(res, 409, "Referenzierter Kunde existiert nicht.");
@@ -102,9 +125,9 @@ async function createBestellung(req, res) {
       `INSERT INTO bestellungen (bestell_datum, gesamtpreis, bestellstatus, kunden_id)
        VALUES (?, ?, ?, ?)`,
       [
-        String(daten.bestell_datum).trim(),
-        Number(daten.gesamtpreis),
-        String(daten.bestellstatus).trim(),
+        bestellDatum,
+        gesamtpreis,
+        bestellstatus,
         kundenId
       ]
     );
@@ -184,9 +207,18 @@ async function patchBestellung(req, res) {
       const setClause = updateKeys.map((key) => `${key} = ?`).join(", ");
       const values = updateKeys.map((key) => {
         if (key === "gesamtpreis") {
-          return Number(daten[key]);
+          const preis = parseGueltigenGesamtpreis(daten[key]);
+          if (preis === null) {
+            throw new Error("INVALID_GESAMTPREIS");
+          }
+          return preis;
         }
-        return String(daten[key]).trim();
+
+        const value = String(daten[key] || "").trim();
+        if ((key === "bestell_datum" || key === "bestellstatus") && value.length === 0) {
+          throw new Error(`INVALID_${key.toUpperCase()}`);
+        }
+        return value;
       });
 
       await db.run(`UPDATE bestellungen SET ${setClause} WHERE bestell_id = ?`, [...values, id]);
@@ -225,6 +257,15 @@ async function patchBestellung(req, res) {
     await db.exec("COMMIT");
   } catch (error) {
     await db.exec("ROLLBACK");
+    if (error.message === "INVALID_GESAMTPREIS") {
+      return sendError(res, 400, "Ungueltiger gesamtpreis (muss >= 0 sein).");
+    }
+    if (error.message === "INVALID_BESTELL_DATUM") {
+      return sendError(res, 400, "Ungueltiges bestell_datum.");
+    }
+    if (error.message === "INVALID_BESTELLSTATUS") {
+      return sendError(res, 400, "Ungueltiger bestellstatus.");
+    }
     return sendError(res, 500, "Bestellung konnte nicht aktualisiert werden.");
   }
 
