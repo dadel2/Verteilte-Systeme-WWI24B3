@@ -7,8 +7,21 @@ const log = logging("db");
 const dbPath = process.env.DB_FILE
   ? path.resolve(process.env.DB_FILE)
   : path.join(__dirname, "..", "..", "pizza-service.db");
+const resetToDemoOnStart = String(process.env.RESET_TO_DEMO_ON_START || "false").toLowerCase() === "true";
 
 let dbInstance = null;
+
+const demoKunden = [
+  ["Max", "Mustermann", "max@example.com", "+49111111111", "Musterweg 1"],
+  ["Anna", "Schmidt", "anna@example.com", "+49222222222", "Hauptstr. 10"],
+  ["Luca", "Weber", "luca@example.com", "+49333333333", "Ringstr. 5"]
+];
+
+const demoArtikel = [
+  ["Margherita", "Tomate, Mozzarella, Basilikum", "Pizza"],
+  ["Salami", "Tomate, Mozzarella, Salami", "Pizza"],
+  ["Tiramisu", "Klassisches Dessert", "Dessert"]
+];
 
 const schemaSql = `
 CREATE TABLE IF NOT EXISTS kunden (
@@ -46,14 +59,70 @@ CREATE TABLE IF NOT EXISTS bestellung_artikel (
 );
 `;
 
-async function seedDemoDataIfEmpty() {
+async function createDemoBestellungen(db, kundenIds, artikelIds) {
+  const demoBestellungen = [
+    ["2026-04-10", 18.5, "neu", 0, [0, 2]],
+    ["2026-04-10", 24.0, "in-zubereitung", 1, [1]],
+    ["2026-04-10", 9.9, "geliefert", 2, [2]]
+  ];
+
+  for (const [datum, preis, status, kundenIndex, artikelIndices] of demoBestellungen) {
+    const kundenId = kundenIds[kundenIndex];
+    const result = await db.run(
+      "INSERT INTO bestellungen (bestell_datum, gesamtpreis, bestellstatus, kunden_id) VALUES (?, ?, ?, ?)",
+      [datum, preis, status, kundenId]
+    );
+
+    for (const artikelIndex of artikelIndices) {
+      await db.run(
+        "INSERT INTO bestellung_artikel (bestell_id, artikel_id) VALUES (?, ?)",
+        [result.lastID, artikelIds[artikelIndex]]
+      );
+    }
+  }
+}
+
+async function resetDatabaseToDemoData() {
   const db = getDb();
 
-  const demoKunden = [
-    ["Max", "Mustermann", "max@example.com", "+49111111111", "Musterweg 1"],
-    ["Anna", "Schmidt", "anna@example.com", "+49222222222", "Hauptstr. 10"],
-    ["Luca", "Weber", "luca@example.com", "+49333333333", "Ringstr. 5"]
-  ];
+  await db.exec("BEGIN TRANSACTION");
+  try {
+    await db.run("DELETE FROM bestellung_artikel");
+    await db.run("DELETE FROM bestellungen");
+    await db.run("DELETE FROM artikel");
+    await db.run("DELETE FROM kunden");
+    await db.run("DELETE FROM sqlite_sequence WHERE name IN ('kunden', 'artikel', 'bestellungen')");
+
+    const kundenIds = [];
+    for (const kunde of demoKunden) {
+      const result = await db.run(
+        "INSERT INTO kunden (vorname, nachname, email, telefonnummer, adresse) VALUES (?, ?, ?, ?, ?)",
+        kunde
+      );
+      kundenIds.push(result.lastID);
+    }
+
+    const artikelIds = [];
+    for (const artikel of demoArtikel) {
+      const result = await db.run(
+        "INSERT INTO artikel (name, beschreibung, kategorie) VALUES (?, ?, ?)",
+        artikel
+      );
+      artikelIds.push(result.lastID);
+    }
+
+    await createDemoBestellungen(db, kundenIds, artikelIds);
+    await db.exec("COMMIT");
+    log.info("Demo-Content wurde komplett zurueckgesetzt.");
+  } catch (error) {
+    await db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+async function seedMinimumDemoData() {
+  const db = getDb();
+
   for (const kunde of demoKunden) {
     await db.run(
       "INSERT OR IGNORE INTO kunden (vorname, nachname, email, telefonnummer, adresse) VALUES (?, ?, ?, ?, ?)",
@@ -61,11 +130,6 @@ async function seedDemoDataIfEmpty() {
     );
   }
 
-  const demoArtikel = [
-    ["Margherita", "Tomate, Mozzarella, Basilikum", "Pizza"],
-    ["Salami", "Tomate, Mozzarella, Salami", "Pizza"],
-    ["Tiramisu", "Klassisches Dessert", "Dessert"]
-  ];
   for (const artikel of demoArtikel) {
     await db.run(
       "INSERT OR IGNORE INTO artikel (name, beschreibung, kategorie) VALUES (?, ?, ?)",
@@ -122,7 +186,12 @@ async function initDatabase() {
 
   await dbInstance.exec("PRAGMA foreign_keys = ON;");
   await dbInstance.exec(schemaSql);
-  await seedDemoDataIfEmpty();
+
+  if (resetToDemoOnStart) {
+    await resetDatabaseToDemoData();
+  } else {
+    await seedMinimumDemoData();
+  }
 
   log.info(`SQLite bereit: ${dbPath}`);
 }
