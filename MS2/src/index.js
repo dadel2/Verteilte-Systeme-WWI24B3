@@ -137,18 +137,20 @@ function startSubscriber() {
 
   mqttClient.on("connect", () => {
     log.info(`Verbunden mit MQTT-Broker: ${brokerUrl}`);
-    const topicMap = {
-      [eventTopicFilter]: subscribeQos,
-      [statusTopicFilter]: subscribeQos
-    };
-
-    mqttClient.subscribe(topicMap, (error) => {
-      if (error) {
-        log.error(`Subscribe fehlgeschlagen: ${error.message}`);
+    mqttClient.subscribe(eventTopicFilter, { qos: subscribeQos }, (eventError) => {
+      if (eventError) {
+        log.error(`Subscribe auf ${eventTopicFilter} fehlgeschlagen: ${eventError.message}`);
         return;
       }
 
-      log.info(`Abonniert: ${eventTopicFilter} und ${statusTopicFilter}`);
+      mqttClient.subscribe(statusTopicFilter, { qos: subscribeQos }, (statusError) => {
+        if (statusError) {
+          log.error(`Subscribe auf ${statusTopicFilter} fehlgeschlagen: ${statusError.message}`);
+          return;
+        }
+
+        log.info(`Abonniert: ${eventTopicFilter} und ${statusTopicFilter}`);
+      });
     });
   });
 
