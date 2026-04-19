@@ -279,7 +279,7 @@ async function patchBestellung(req, res) {
     [id]
   );
 
-  await publishResourceChange("bestellungen", updated.bestell_id, "update");
+  await publishResourceChange("bestellungen", updated.bestell_id, "update", { geaenderteFelder: keys });
   return res.json({ ...updated, artikel });
 }
 

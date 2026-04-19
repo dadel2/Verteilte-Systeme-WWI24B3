@@ -14,13 +14,51 @@ const subscribeQos =
 let mqttClient = null;
 let shuttingDown = false;
 
-function formatUserMessage(topic, payload) {
-  const ressourcentyp = payload.ressourcentyp || "unbekannt";
+function mapChangeVerb(changeType) {
+  const normalized = String(changeType || "").toLowerCase();
+  if (normalized === "create") {
+    return "angelegt";
+  }
+  if (normalized === "update") {
+    return "aktualisiert";
+  }
+  if (normalized === "delete") {
+    return "gelöscht";
+  }
+  return "geaendert";
+}
+
+function mapResourceLabel(resourceType) {
+  const normalized = String(resourceType || "").toLowerCase();
+  if (normalized === "kunden") {
+    return "Kunden";
+  }
+  if (normalized === "artikel") {
+    return "Artikel";
+  }
+  if (normalized === "bestellungen") {
+    return "Bestellungen";
+  }
+  return "Ressource";
+}
+
+function formatUserMessage(payload) {
+  const ressourcentyp = payload.ressourcentyp || "";
   const id = payload.id ?? "unbekannt";
   const aenderung = payload.aenderung || "unbekannt";
-  const zeitstempel = payload.zeitstempel || "kein Zeitstempel";
+  const geaenderteFelder = Array.isArray(payload.geaenderte_felder)
+    ? payload.geaenderte_felder
+        .map((field) => String(field || "").trim())
+        .filter((field) => field.length > 0)
+    : [];
+  const resourceLabel = mapResourceLabel(ressourcentyp);
+  const changeVerb = mapChangeVerb(aenderung);
 
-  return `Aenderung: ${ressourcentyp} mit ID ${id} wurde '${aenderung}' (${zeitstempel}) [Topic: ${topic}]`;
+  if (String(aenderung).toLowerCase() === "update" && geaenderteFelder.length > 0) {
+    return `${resourceLabel} ID ${id} wurde ${changeVerb} (Felder: ${geaenderteFelder.join(", ")}).`;
+  }
+
+  return `${resourceLabel} ID ${id} wurde ${changeVerb}.`;
 }
 
 function startSubscriber() {
@@ -46,7 +84,7 @@ function startSubscriber() {
 
     try {
       const payload = JSON.parse(rawMessage);
-      log.info(formatUserMessage(topic, payload));
+      log.info(formatUserMessage(payload));
     } catch (error) {
       log.warn(`Ungueltige JSON-Nachricht auf ${topic}: ${rawMessage}`);
     }

@@ -10,6 +10,18 @@ const publishQos = Number.isInteger(rawQos) && rawQos >= 0 && rawQos <= 2 ? rawQ
 
 let mqttClient = null;
 
+function sanitizeChangedFields(changedFields) {
+  if (!Array.isArray(changedFields)) {
+    return [];
+  }
+
+  return [...new Set(
+    changedFields
+      .map((field) => String(field || "").trim())
+      .filter((field) => field.length > 0)
+  )];
+}
+
 function initMqttPublisher() {
   if (mqttClient) {
     return mqttClient;
@@ -36,7 +48,7 @@ function initMqttPublisher() {
   return mqttClient;
 }
 
-async function publishResourceChange(resourceType, resourceId, changeType) {
+async function publishResourceChange(resourceType, resourceId, changeType, options = {}) {
   if (!mqttClient) {
     initMqttPublisher();
   }
@@ -53,6 +65,11 @@ async function publishResourceChange(resourceType, resourceId, changeType) {
     aenderung: changeType,
     zeitstempel: new Date().toISOString()
   };
+
+  const geaenderteFelder = sanitizeChangedFields(options.geaenderteFelder);
+  if (geaenderteFelder.length > 0) {
+    payload.geaenderte_felder = geaenderteFelder;
+  }
 
   return new Promise((resolve) => {
     mqttClient.publish(topic, JSON.stringify(payload), { qos: publishQos, retain: false }, (error) => {

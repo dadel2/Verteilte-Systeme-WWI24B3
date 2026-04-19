@@ -106,7 +106,7 @@ async function patchArtikel(req, res) {
   try {
     await db.run(`UPDATE artikel SET ${setClause} WHERE artikel_id = ?`, [...values, id]);
     const updated = await db.get("SELECT * FROM artikel WHERE artikel_id = ?", [id]);
-    await publishResourceChange("artikel", updated.artikel_id, "update");
+    await publishResourceChange("artikel", updated.artikel_id, "update", { geaenderteFelder: keys });
     return res.json(updated);
   } catch (error) {
     if (String(error.message).includes("UNIQUE constraint failed")) {
