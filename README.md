@@ -16,7 +16,6 @@ Damit lassen sich zentrale Konzepte aus Verteilten Systemen gut zeigen:
 - Datenhaltung und Validierung (MS1 + SQLite)
 - synchrone Kommunikation (REST)
 - asynchrone Ereignisse (MQTT Publisher/Subscriber)
-- Service-Status ueber Retained Message und Last Will
 - reproduzierbarer Betrieb mit Docker Compose
 
 ## Regeln fuer die Datensaetze
@@ -47,10 +46,7 @@ Damit lassen sich zentrale Konzepte aus Verteilten Systemen gut zeigen:
 
 ## MQTT-Regeln im Projekt
 - Event-Topic Prefix: pizza-service/events
-- Status-Topic MS1: pizza-service/status/ms1
 - QoS: 1
-- Statusmeldungen werden retained publisht.
-- Last Will von MS1: 'offline' mit: reason  'unexpected_disconnect'
 
 ## Docker Endpunkte
 

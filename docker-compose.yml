@@ -26,7 +26,6 @@ services:
       PORT: "8080"
       MQTT_BROKER_URL: mqtt://mqtt-broker:1883
       MQTT_TOPIC_PREFIX: pizza-service/events
-      MQTT_STATUS_TOPIC: pizza-service/status/ms1
       MQTT_QOS: "1"
       DB_FILE: /data/pizza-service.db
       RESET_TO_DEMO_ON_START: "true"
