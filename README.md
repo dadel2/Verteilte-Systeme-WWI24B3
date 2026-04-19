@@ -4,7 +4,7 @@
 Dieses Projekt bildet einen verteilten Pizza-Service mit zwei Microservices nach:
 
 - `MS1`: REST-API mit SQLite fuer Kunden, Artikel und Bestellungen
-- `MS2`: MQTT-Subscriber mit Monitoring-API und Web-Dashboard
+- `MS2`: MQTT-Subscriber mit nutzerverstaendlicher Konsolenausgabe
 - `mqtt-broker` (EMQX): asynchrone Kommunikation zwischen den Services
 
 Die Services werden mit Docker Compose gemeinsam gestartet.
@@ -26,13 +26,13 @@ Damit lassen sich zentrale Konzepte aus Verteilten Systemen gut zeigen:
 - Alle Pflichtfelder muessen nicht-leere Strings sein.
 - `email` ist eindeutig.
 - `telefonnummer` ist eindeutig.
-- Ungueltige oder unbekannte Attribute werden mit `400` abgewiesen.
+- Unbekannte Attribute in `POST`/`PATCH` werden ignoriert.
 
 ### Artikel
 - Pflichtfelder bei `POST /artikel`: `name`, `kategorie`
 - Optional: `beschreibung`
 - `name + kategorie` muss eindeutig sein.
-- Ungueltige oder unbekannte Attribute werden mit `400` abgewiesen.
+- Unbekannte Attribute in `POST`/`PATCH` werden ignoriert.
 
 ### Bestellung
 - Pflichtfelder bei `POST /bestellungen`:
@@ -55,10 +55,7 @@ Damit lassen sich zentrale Konzepte aus Verteilten Systemen gut zeigen:
 ## Docker Endpunkte
 
 - MS1 Health: `http://localhost:8080/health`
-- MS2 Health: `http://localhost:8081/health`
-- MS2 Dashboard: `http://localhost:8081/`
-- MS2 Events: `http://localhost:8081/events?limit=20`
-- MS2 Status: `http://localhost:8081/status`
+- MS1 Swagger UI: `http://localhost:8080/api-docs`
 - EMQX Dashboard: `http://localhost:18083` (Login: `admin` / `public`)
 
 ## Docker-Dokumentation (Links)

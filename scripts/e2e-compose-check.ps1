@@ -5,29 +5,6 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-function Assert-Contains {
-  param(
-    [string]$Text,
-    [string]$Pattern,
-    [string]$Label
-  )
-
-  try {
-    $matched = [regex]::IsMatch($Text, $Pattern)
-  } catch {
-    Write-Host "[FAIL] $Label (ungueltiges Muster: $Pattern)"
-    return $false
-  }
-
-  if ($matched) {
-    Write-Host "[PASS] $Label"
-    return $true
-  }
-
-  Write-Host "[FAIL] $Label"
-  return $false
-}
-
 function Wait-ForHealth {
   param(
     [string]$Url,
@@ -49,25 +26,25 @@ function Wait-ForHealth {
   return $false
 }
 
-function Assert-ServiceStatus {
+function Wait-ForLogPattern {
   param(
     [string]$ServiceName,
-    [string]$ExpectedStatus,
-    [int]$TimeoutSeconds = 25
+    [string]$Pattern,
+    [int]$TimeoutSeconds = 30
   )
 
   $started = Get-Date
   while (((Get-Date) - $started).TotalSeconds -lt $TimeoutSeconds) {
     try {
-      $statusResponse = Invoke-RestMethod -Method Get -Uri "http://localhost:8081/status"
-      $service = $statusResponse.services.$ServiceName
-      if ($null -ne $service -and $service.status -eq $ExpectedStatus) {
+      $logs = docker compose logs $ServiceName --tail 200 2>&1 | Out-String
+      if ([regex]::IsMatch($logs, $Pattern)) {
         return $true
       }
     } catch {
       Start-Sleep -Milliseconds 700
     }
-    Start-Sleep -Milliseconds 500
+
+    Start-Sleep -Milliseconds 700
   }
 
   return $false
@@ -85,18 +62,21 @@ try {
   Write-Host "==> Warte auf MS1 Health-Endpoint"
   $healthOk = Wait-ForHealth -Url "http://localhost:8080/health" -TimeoutSeconds 80
   $results += $healthOk
-  if (-not $healthOk) {
+  if ($healthOk) {
+    Write-Host "[PASS] MS1 /health erreichbar"
+  } else {
+    Write-Host "[FAIL] MS1 /health nicht erreichbar"
     throw "MS1 Health-Endpoint ist nicht erreichbar."
   }
-  Write-Host "[PASS] MS1 /health erreichbar"
 
-  Write-Host "==> Warte auf MS2 Health-Endpoint"
-  $ms2HealthOk = Wait-ForHealth -Url "http://localhost:8081/health" -TimeoutSeconds 80
-  $results += $ms2HealthOk
-  if (-not $ms2HealthOk) {
-    throw "MS2 Health-Endpoint ist nicht erreichbar."
+  Write-Host "==> Warte auf MS2 MQTT-Subscribe Log"
+  $subscribeOk = Wait-ForLogPattern -ServiceName "ms2" -Pattern "MS2 abonniert Topic-Filter" -TimeoutSeconds 40
+  $results += $subscribeOk
+  if ($subscribeOk) {
+    Write-Host "[PASS] MS2 hat Topic-Filter abonniert"
+  } else {
+    Write-Host "[FAIL] MS2 Subscribe-Log nicht gefunden"
   }
-  Write-Host "[PASS] MS2 /health erreichbar"
 
   Write-Host "==> Trigger Event: POST /kunden"
   $stamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
@@ -121,48 +101,13 @@ try {
     Write-Host "[FAIL] Kunde konnte nicht erstellt werden"
   }
 
-  Start-Sleep -Seconds 3
-  $eventsResponse = Invoke-RestMethod -Method Get -Uri "http://localhost:8081/events?limit=200"
-  $eventsJson = $eventsResponse | ConvertTo-Json -Depth 10
-  $results += Assert-Contains -Text $eventsJson -Pattern '"type"\s*:\s*"event"' -Label "MS2 Event-Historie enthaelt Fach-Event"
-  $results += Assert-Contains -Text $eventsJson -Pattern '"type"\s*:\s*"status"' -Label "MS2 Event-Historie enthaelt Status-Event"
-  $results += Assert-Contains -Text $eventsJson -Pattern '"retained"\s*:\s*true' -Label "Retained-Status sichtbar"
-
-  Write-Host "==> Retained-Check durch MS2 Neustart"
-  docker compose restart ms2 | Out-Null
-  Start-Sleep -Seconds 6
-  $ms2HealthAfterRestart = Wait-ForHealth -Url "http://localhost:8081/health" -TimeoutSeconds 40
-  $results += $ms2HealthAfterRestart
-  if ($ms2HealthAfterRestart) {
-    Write-Host "[PASS] MS2 nach Restart wieder erreichbar"
+  Write-Host "==> Warte auf fachliche Event-Ausgabe in MS2 Logs"
+  $eventOk = Wait-ForLogPattern -ServiceName "ms2" -Pattern "Aenderung: kunden mit ID .* wurde" -TimeoutSeconds 40
+  $results += $eventOk
+  if ($eventOk) {
+    Write-Host "[PASS] MS2 hat Kunden-Event geloggt"
   } else {
-    Write-Host "[FAIL] MS2 nach Restart nicht erreichbar"
-  }
-  $results += Assert-ServiceStatus -ServiceName "ms1" -ExpectedStatus "online" -TimeoutSeconds 25
-  if ($results[-1]) {
-    Write-Host "[PASS] Retained Online-Status nach MS2 Restart"
-  } else {
-    Write-Host "[FAIL] Retained Online-Status nach MS2 Restart"
-  }
-
-  Write-Host "==> Last-Will Check (hartes Stoppen von MS1)"
-  docker compose kill ms1 | Out-Null
-  $lastWillOk = Assert-ServiceStatus -ServiceName "ms1" -ExpectedStatus "offline" -TimeoutSeconds 30
-  $results += $lastWillOk
-  if ($lastWillOk) {
-    Write-Host "[PASS] Last-Will Event empfangen"
-  } else {
-    Write-Host "[FAIL] Last-Will Event empfangen"
-  }
-
-  Write-Host "==> MS1 wieder starten"
-  docker compose up -d ms1 | Out-Null
-  $onlineAfterRecover = Assert-ServiceStatus -ServiceName "ms1" -ExpectedStatus "online" -TimeoutSeconds 30
-  $results += $onlineAfterRecover
-  if ($onlineAfterRecover) {
-    Write-Host "[PASS] Online-Status nach Restart empfangen"
-  } else {
-    Write-Host "[FAIL] Online-Status nach Restart empfangen"
+    Write-Host "[FAIL] MS2 hat kein Kunden-Event geloggt"
   }
 
   $passCount = ($results | Where-Object { $_ }).Count

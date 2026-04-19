@@ -13,6 +13,7 @@ Optional: EMQX Dashboard (Broker-UI) im Browser:
 ```text
 http://localhost:18083
 ```
+
 Login: `admin` / `public`
 
 Alternativ als One-Command-Ende-zu-Ende-Test:
@@ -21,7 +22,9 @@ Alternativ als One-Command-Ende-zu-Ende-Test:
 powershell -ExecutionPolicy Bypass -File .\scripts\e2e-compose-check.ps1
 ```
 
-## 2) Gesundheit von MS1 pruefen
+## 2) MS1 pruefen
+
+Health-Check:
 
 ```powershell
 Invoke-RestMethod -Method Get -Uri "http://localhost:8080/health"
@@ -33,16 +36,10 @@ Erwartung:
 {"status":"ok","service":"MS1"}
 ```
 
-Zusatzcheck fuer MS2:
-
-```powershell
-Invoke-RestMethod -Method Get -Uri "http://localhost:8081/health"
-```
-
-Dashboard im Browser:
+Swagger UI:
 
 ```text
-http://localhost:8081/
+http://localhost:8080/api-docs
 ```
 
 ## 3) MQTT-Ende-zu-Ende pruefen
@@ -73,53 +70,10 @@ docker compose logs ms2 --tail 50
 
 Erwartung in den Logs:
 - `Verbunden mit MQTT-Broker`
-- `Abonniert: pizza-service/events/# und pizza-service/status/#`
-- `Aenderung empfangen: Ressource 'kunden' ... [QoS=1, retained=false]`
+- `MS2 abonniert Topic-Filter: pizza-service/events/#`
+- `Aenderung: kunden mit ID ... wurde ...`
 
-Alternative ohne Logsuche (MS2 API):
-
-```powershell
-Invoke-RestMethod -Method Get -Uri "http://localhost:8081/events?limit=20"
-Invoke-RestMethod -Method Get -Uri "http://localhost:8081/status"
-```
-
-## 4) Retained Message pruefen (Service-Status)
-
-MS2 neu starten und dann direkt Logs ansehen:
-
-```powershell
-docker compose restart ms2
-docker compose logs ms2 --tail 50
-```
-
-Erwartung:
-- Direkt nach Subscribe erscheint ein Statuseintrag von `ms1`.
-- In diesem Statuseintrag steht `retained=true`.
-
-## 5) Last Will pruefen (unerwarteter Abbruch)
-
-MS1 hart beenden:
-
-```powershell
-docker compose kill ms1
-docker compose logs ms2 --tail 80
-```
-
-Erwartung in MS2-Logs:
-- Statuseintrag fuer `ms1` mit `status='offline'` und `reason='unexpected_disconnect'`
-- Der Status kommt ueber das Topic `pizza-service/status/ms1`.
-
-MS1 wieder starten:
-
-```powershell
-docker compose up -d ms1
-docker compose logs ms2 --tail 80
-```
-
-Erwartung:
-- Neuer Statuseintrag mit `status='online'`.
-
-## 6) Services stoppen
+## 4) Services stoppen
 
 ```powershell
 docker compose down
