@@ -45,14 +45,12 @@ async function createArtikel(req, res) {
   const erlaubteFelder = ["name", "beschreibung", "kategorie"];
   const pflichtFelder = ["name", "kategorie"];
   const body = req.body || {};
-
-  const invalidKeys = Object.keys(body).filter((key) => !erlaubteFelder.includes(key));
-  if (invalidKeys.length > 0) {
-    return sendError(res, 400, `Ungueltige Attribute: ${invalidKeys.join(", ")}`);
-  }
+  const daten = Object.fromEntries(
+    Object.entries(body).filter(([key]) => erlaubteFelder.includes(key))
+  );
 
   const fehlendeFelder = pflichtFelder.filter((field) => {
-    const value = body[field];
+    const value = daten[field];
     return typeof value !== "string" || value.trim() === "";
   });
   if (fehlendeFelder.length > 0) {
@@ -62,7 +60,7 @@ async function createArtikel(req, res) {
   try {
     const result = await db.run(
       "INSERT INTO artikel (name, beschreibung, kategorie) VALUES (?, ?, ?)",
-      [body.name.trim(), (body.beschreibung || "").trim(), body.kategorie.trim()]
+      [daten.name.trim(), (daten.beschreibung || "").trim(), daten.kategorie.trim()]
     );
     const created = await db.get("SELECT * FROM artikel WHERE artikel_id = ?", [result.lastID]);
     await publishResourceChange("artikel", created.artikel_id, "create");
@@ -85,15 +83,13 @@ async function patchArtikel(req, res) {
 
   const erlaubteFelder = ["name", "beschreibung", "kategorie"];
   const body = req.body || {};
-  const keys = Object.keys(body);
+  const daten = Object.fromEntries(
+    Object.entries(body).filter(([key]) => erlaubteFelder.includes(key))
+  );
+  const keys = Object.keys(daten);
 
   if (keys.length === 0) {
-    return sendError(res, 400, "Keine Attribute zum Aktualisieren uebergeben.");
-  }
-
-  const invalidKeys = keys.filter((key) => !erlaubteFelder.includes(key));
-  if (invalidKeys.length > 0) {
-    return sendError(res, 400, `Ungueltige Attribute: ${invalidKeys.join(", ")}`);
+    return sendError(res, 400, "Keine gueltigen Attribute zum Aktualisieren uebergeben.");
   }
 
   const existing = await db.get("SELECT * FROM artikel WHERE artikel_id = ?", [id]);
@@ -103,7 +99,7 @@ async function patchArtikel(req, res) {
 
   const setClause = keys.map((key) => `${key} = ?`).join(", ");
   const values = keys.map((key) => {
-    const value = body[key];
+    const value = daten[key];
     return typeof value === "string" ? value.trim() : value;
   });
 

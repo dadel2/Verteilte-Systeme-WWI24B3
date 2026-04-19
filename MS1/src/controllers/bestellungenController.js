@@ -56,27 +56,27 @@ async function createBestellung(req, res) {
 
   const erlaubteFelder = ["bestell_datum", "gesamtpreis", "bestellstatus", "kunden_id", "artikel_ids"];
   const pflichtFelder = erlaubteFelder;
+  const daten = Object.fromEntries(
+    Object.entries(body).filter(([key]) => erlaubteFelder.includes(key))
+  );
 
-  const invalidKeys = Object.keys(body).filter((key) => !erlaubteFelder.includes(key));
-  if (invalidKeys.length > 0) {
-    return sendError(res, 400, `Ungueltige Attribute: ${invalidKeys.join(", ")}`);
-  }
-
-  const fehlendeFelder = pflichtFelder.filter((field) => body[field] === undefined || body[field] === null);
+  const fehlendeFelder = pflichtFelder.filter(
+    (field) => daten[field] === undefined || daten[field] === null
+  );
   if (fehlendeFelder.length > 0) {
     return sendError(res, 400, `Fehlende Pflichtattribute: ${fehlendeFelder.join(", ")}`);
   }
 
-  if (!Array.isArray(body.artikel_ids) || body.artikel_ids.length === 0) {
+  if (!Array.isArray(daten.artikel_ids) || daten.artikel_ids.length === 0) {
     return sendError(res, 400, "artikel_ids muss ein nicht-leeres Array sein.");
   }
 
-  const artikelIds = [...new Set(body.artikel_ids.map((id) => Number.parseInt(id, 10)))];
+  const artikelIds = [...new Set(daten.artikel_ids.map((id) => Number.parseInt(id, 10)))];
   if (artikelIds.some((id) => !Number.isInteger(id) || id <= 0)) {
     return sendError(res, 400, "artikel_ids enthaelt ungueltige IDs.");
   }
 
-  const kundenId = Number.parseInt(body.kunden_id, 10);
+  const kundenId = Number.parseInt(daten.kunden_id, 10);
   if (!Number.isInteger(kundenId) || kundenId <= 0) {
     return sendError(res, 400, "Ungueltige kunden_id.");
   }
@@ -102,9 +102,9 @@ async function createBestellung(req, res) {
       `INSERT INTO bestellungen (bestell_datum, gesamtpreis, bestellstatus, kunden_id)
        VALUES (?, ?, ?, ?)`,
       [
-        String(body.bestell_datum).trim(),
-        Number(body.gesamtpreis),
-        String(body.bestellstatus).trim(),
+        String(daten.bestell_datum).trim(),
+        Number(daten.gesamtpreis),
+        String(daten.bestellstatus).trim(),
         kundenId
       ]
     );
@@ -151,15 +151,13 @@ async function patchBestellung(req, res) {
 
   const erlaubteFelder = ["bestell_datum", "gesamtpreis", "bestellstatus", "kunden_id", "artikel_ids"];
   const body = req.body || {};
-  const keys = Object.keys(body);
+  const daten = Object.fromEntries(
+    Object.entries(body).filter(([key]) => erlaubteFelder.includes(key))
+  );
+  const keys = Object.keys(daten);
 
   if (keys.length === 0) {
-    return sendError(res, 400, "Keine Attribute zum Aktualisieren uebergeben.");
-  }
-
-  const invalidKeys = keys.filter((key) => !erlaubteFelder.includes(key));
-  if (invalidKeys.length > 0) {
-    return sendError(res, 400, `Ungueltige Attribute: ${invalidKeys.join(", ")}`);
+    return sendError(res, 400, "Keine gueltigen Attribute zum Aktualisieren uebergeben.");
   }
 
   const updateKeys = keys.filter((key) => key !== "artikel_ids");
@@ -168,7 +166,7 @@ async function patchBestellung(req, res) {
     await db.exec("BEGIN TRANSACTION");
 
     if (updateKeys.includes("kunden_id")) {
-      const kundenId = Number.parseInt(body.kunden_id, 10);
+      const kundenId = Number.parseInt(daten.kunden_id, 10);
       if (!Number.isInteger(kundenId) || kundenId <= 0) {
         await db.exec("ROLLBACK");
         return sendError(res, 400, "Ungueltige kunden_id.");
@@ -179,28 +177,30 @@ async function patchBestellung(req, res) {
         await db.exec("ROLLBACK");
         return sendError(res, 409, "Referenzierter Kunde existiert nicht.");
       }
-      body.kunden_id = kundenId;
+      daten.kunden_id = kundenId;
     }
 
     if (updateKeys.length > 0) {
       const setClause = updateKeys.map((key) => `${key} = ?`).join(", ");
       const values = updateKeys.map((key) => {
         if (key === "gesamtpreis") {
-          return Number(body[key]);
+          return Number(daten[key]);
         }
-        return String(body[key]).trim();
+        return String(daten[key]).trim();
       });
 
       await db.run(`UPDATE bestellungen SET ${setClause} WHERE bestell_id = ?`, [...values, id]);
     }
 
-    if (Object.prototype.hasOwnProperty.call(body, "artikel_ids")) {
-      if (!Array.isArray(body.artikel_ids) || body.artikel_ids.length === 0) {
+    if (Object.prototype.hasOwnProperty.call(daten, "artikel_ids")) {
+      if (!Array.isArray(daten.artikel_ids) || daten.artikel_ids.length === 0) {
         await db.exec("ROLLBACK");
         return sendError(res, 400, "artikel_ids muss ein nicht-leeres Array sein.");
       }
 
-      const artikelIds = [...new Set(body.artikel_ids.map((artikelId) => Number.parseInt(artikelId, 10)))];
+      const artikelIds = [
+        ...new Set(daten.artikel_ids.map((artikelId) => Number.parseInt(artikelId, 10)))
+      ];
       if (artikelIds.some((artikelId) => !Number.isInteger(artikelId) || artikelId <= 0)) {
         await db.exec("ROLLBACK");
         return sendError(res, 400, "artikel_ids enthaelt ungueltige IDs.");

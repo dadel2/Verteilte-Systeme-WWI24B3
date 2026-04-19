@@ -7,13 +7,12 @@ const {
   deleteKunde
 } = require("../controllers/kundenController");
 
-
-
 const router = express.Router();
 
 router.get("/", getAllKunden);
 router.get("/:id", getKundeById);
 router.post("/", createKunde);
-module.exports = router;
 router.patch("/:id", patchKunde);
 router.delete("/:id", deleteKunde);
+
+module.exports = router;
