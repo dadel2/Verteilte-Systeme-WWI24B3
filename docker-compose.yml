@@ -1,6 +1,6 @@
 services:
   mqtt-broker:
-    image: emqx/emqx:5.8.5
+    image: emqx/emqx:latest
     container_name: pizza-mqtt-broker
     restart: unless-stopped
     ports:
