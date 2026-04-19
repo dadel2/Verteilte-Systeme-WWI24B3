@@ -1,15 +1,19 @@
 services:
   mqtt-broker:
-    image: eclipse-mosquitto:2
+    image: emqx/emqx:5.8.5
     container_name: pizza-mqtt-broker
     restart: unless-stopped
     ports:
       - "1883:1883"
-      - "9001:9001"
+      - "8083:8083"
+      - "18083:18083"
+    environment:
+      EMQX_ALLOW_ANONYMOUS: "true"
+      EMQX_DASHBOARD__DEFAULT_USERNAME: "admin"
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: "public"
     volumes:
-      - ./infrastructure/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./infrastructure/mosquitto/data:/mosquitto/data
-      - ./infrastructure/mosquitto/log:/mosquitto/log
+      - emqx_data:/opt/emqx/data
+      - emqx_log:/opt/emqx/log
 
   ms1:
     build:
@@ -50,3 +54,5 @@ services:
 
 volumes:
   ms1_db_data:
+  emqx_data:
+  emqx_log:

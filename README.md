@@ -5,7 +5,7 @@ Dieses Projekt bildet einen verteilten Pizza-Service mit zwei Microservices nach
 
 - `MS1`: REST-API mit SQLite fuer Kunden, Artikel und Bestellungen
 - `MS2`: MQTT-Subscriber mit Monitoring-API und Web-Dashboard
-- `mqtt-broker` (Mosquitto): asynchrone Kommunikation zwischen den Services
+- `mqtt-broker` (EMQX): asynchrone Kommunikation zwischen den Services
 
 Die Services werden mit Docker Compose gemeinsam gestartet.
 
@@ -59,10 +59,12 @@ Damit lassen sich zentrale Konzepte aus Verteilten Systemen gut zeigen:
 - MS2 Dashboard: `http://localhost:8081/`
 - MS2 Events: `http://localhost:8081/events?limit=20`
 - MS2 Status: `http://localhost:8081/status`
+- EMQX Dashboard: `http://localhost:18083` (Login: `admin` / `public`)
 
 ## Docker-Dokumentation (Links)
 - Docker Get Started: https://docs.docker.com/get-started/
 - Docker Desktop (Windows): https://docs.docker.com/desktop/setup/install/windows-install/
 - Docker Compose Overview: https://docs.docker.com/compose/
 - Compose File Reference: https://docs.docker.com/reference/compose-file/
-- Mosquitto Docker Image: https://hub.docker.com/_/eclipse-mosquitto
+- EMQX Docker Deployment: https://docs.emqx.com/en/emqx/latest/deploy/install-docker.html
+- EMQX Docker Hub: https://hub.docker.com/r/emqx/emqx

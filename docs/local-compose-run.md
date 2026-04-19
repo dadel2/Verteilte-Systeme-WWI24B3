@@ -8,6 +8,13 @@ docker compose up -d --build
 docker compose ps
 ```
 
+Optional: EMQX Dashboard (Broker-UI) im Browser:
+
+```text
+http://localhost:18083
+```
+Login: `admin` / `public`
+
 Alternativ als One-Command-Ende-zu-Ende-Test:
 
 ```powershell
