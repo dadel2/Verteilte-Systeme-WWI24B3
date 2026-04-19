@@ -36,13 +36,13 @@ Damit lassen sich zentrale Konzepte aus Verteilten Systemen gut zeigen:
 ### Bestellung
 - Pflichtfelder bei `POST /bestellungen`:
   `bestell_datum`, `gesamtpreis`, `bestellstatus`, `kunden_id`, `artikel_ids`
-- `artikel_ids` muss ein nicht-leeres Array mit gueltigen Integer-IDs > 0 sein.
+- `artikel_ids` muss ein nicht leeres Array mit gueltigen Integer-IDs > 0 sein.
 - `kunden_id` muss auf einen existierenden Kunden zeigen.
 - Alle `artikel_ids` muessen auf existierende Artikel zeigen.
 - `gesamtpreis` muss >= 0 sein
 - Beziehungen:
   - Kunde -> Bestellung 
-  - Bestellung <-> Artikel ueber 'bestellung_artikel'
+  - Bestellung <-> Artikel über 'bestellung_artikel'
 
 ## MQTT-Regeln im Projekt
 - Event-Topic Prefix: pizza-service/events
