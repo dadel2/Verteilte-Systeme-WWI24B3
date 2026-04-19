@@ -3,14 +3,14 @@
 ## Kurze Projektbeschreibung
 Dieses Projekt bildet einen verteilten Pizza-Service mit zwei Microservices nach:
 
-- `MS1`: REST-API mit SQLite fuer Kunden, Artikel und Bestellungen
+- `MS1`: REST-API mit SQLite für Kunden, Artikel und Bestellungen
 - `MS2`: MQTT-Subscriber mit nutzerverstaendlicher Konsolenausgabe
 - `mqtt-broker` (EMQX): asynchrone Kommunikation zwischen den Services
 
 Die Services werden mit Docker Compose gemeinsam gestartet.
 
 ## Warum dieses Thema (Pizza Service)
-Ich habe mich fuer das Thema Pizza Service entschieden, weil es ein realistisches, aber ueberschaubares Fachszenario ist.  
+Ich habe mich für das Thema Pizza Service entschieden, weil es ein realistisches, aber überschaubares Fachszenario ist.  
 Damit lassen sich zentrale Konzepte aus Verteilten Systemen gut zeigen:
 
 - Datenhaltung und Validierung (MS1 + SQLite)
