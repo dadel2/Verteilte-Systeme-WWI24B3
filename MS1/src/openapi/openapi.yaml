@@ -45,6 +45,7 @@ paths:
                   $ref: '#/components/schemas/Kunde'
     post:
       summary: Neuen Kunden anlegen
+      description: Unbekannte Attribute werden ignoriert.
       requestBody:
         required: true
         content:
@@ -80,6 +81,7 @@ paths:
           $ref: '#/components/responses/Fehler404'
     patch:
       summary: Kundenattribute aktualisieren
+      description: Unbekannte Attribute werden ignoriert.
       parameters:
         - $ref: '#/components/parameters/KundenId'
       requestBody:
@@ -135,6 +137,7 @@ paths:
                   $ref: '#/components/schemas/Artikel'
     post:
       summary: Neuen Artikel anlegen
+      description: Unbekannte Attribute werden ignoriert.
       requestBody:
         required: true
         content:
@@ -170,6 +173,7 @@ paths:
           $ref: '#/components/responses/Fehler404'
     patch:
       summary: Artikelattribute aktualisieren
+      description: Unbekannte Attribute werden ignoriert.
       parameters:
         - $ref: '#/components/parameters/ArtikelId'
       requestBody:
@@ -225,6 +229,7 @@ paths:
                   $ref: '#/components/schemas/Bestellung'
     post:
       summary: Neue Bestellung anlegen
+      description: Unbekannte Attribute werden ignoriert.
       requestBody:
         required: true
         content:
@@ -260,6 +265,7 @@ paths:
           $ref: '#/components/responses/Fehler404'
     patch:
       summary: Bestellung aktualisieren
+      description: Unbekannte Attribute werden ignoriert.
       parameters:
         - $ref: '#/components/parameters/BestellungId'
       requestBody:
@@ -292,7 +298,8 @@ paths:
           $ref: '#/components/responses/Fehler400'
         '404':
           $ref: '#/components/responses/Fehler404'
-  components:
+
+components:
   parameters:
     KundenId:
       in: path
@@ -370,7 +377,6 @@ paths:
           type: string
         adresse:
           type: string
-      additionalProperties: false
     Artikel:
       type: object
       properties:
@@ -407,7 +413,6 @@ paths:
           type: string
         kategorie:
           type: string
-      additionalProperties: false
     Bestellung:
       type: object
       properties:
@@ -463,7 +468,6 @@ paths:
           type: array
           items:
             type: integer
-      additionalProperties: false
     BestellungMitArtikel:
       allOf:
         - $ref: '#/components/schemas/Bestellung'
