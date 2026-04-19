@@ -1,9 +1,9 @@
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
   [switch]$KeepRunning
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 function Assert-Contains {
   param(
@@ -12,7 +12,14 @@ function Assert-Contains {
     [string]$Label
   )
 
-  if ($Text -match $Pattern) {
+  try {
+    $matched = [regex]::IsMatch($Text, $Pattern)
+  } catch {
+    Write-Host "[FAIL] $Label (ungueltiges Muster: $Pattern)"
+    return $false
+  }
+
+  if ($matched) {
     Write-Host "[PASS] $Label"
     return $true
   }
@@ -117,9 +124,9 @@ try {
   Start-Sleep -Seconds 3
   $eventsResponse = Invoke-RestMethod -Method Get -Uri "http://localhost:8081/events?limit=200"
   $eventsJson = $eventsResponse | ConvertTo-Json -Depth 10
-  $results += Assert-Contains -Text $eventsJson -Pattern "\"type\":\\s*\"event\"" -Label "MS2 Event-Historie enthaelt Fach-Event"
-  $results += Assert-Contains -Text $eventsJson -Pattern "\"type\":\\s*\"status\"" -Label "MS2 Event-Historie enthaelt Status-Event"
-  $results += Assert-Contains -Text $eventsJson -Pattern "\"retained\":\\s*true" -Label "Retained-Status sichtbar"
+  $results += Assert-Contains -Text $eventsJson -Pattern '"type"\s*:\s*"event"' -Label "MS2 Event-Historie enthaelt Fach-Event"
+  $results += Assert-Contains -Text $eventsJson -Pattern '"type"\s*:\s*"status"' -Label "MS2 Event-Historie enthaelt Status-Event"
+  $results += Assert-Contains -Text $eventsJson -Pattern '"retained"\s*:\s*true' -Label "Retained-Status sichtbar"
 
   Write-Host "==> Retained-Check durch MS2 Neustart"
   docker compose restart ms2 | Out-Null
