@@ -3,6 +3,7 @@ const logging = require("logging").default;
 const { initDatabase } = require("./database/db");
 const { initMqttPublisher, closeMqttPublisher } = require("./mqtt/publisher");
 const { setupOpenApi } = require("./openapi/openapi");
+const { sendError } = require("./utils/httpError");
 const kundenRoutes = require("./routes/kundenRoutes");
 
 const artikelRoutes = require("./routes/artikelRoutes");
@@ -23,6 +24,22 @@ app.use("/kunden", kundenRoutes);
 app.use("/artikel", artikelRoutes);
 app.use("/bestellungen", bestellungenRoutes);
 
+app.use((error, req, res, next) => {
+  if (error instanceof SyntaxError && Object.prototype.hasOwnProperty.call(error, "body")) {
+    return sendError(res, 400, "Ungueltiges JSON-Dokument.");
+  }
+
+  return next(error);
+});
+
+app.use((error, req, res, next) => {
+  if (res.headersSent) {
+    return next(error);
+  }
+
+  log.error(error.stack || error.message);
+  return sendError(res, 500, "Interner Serverfehler.");
+});
 
 async function start() {
   await initDatabase();
